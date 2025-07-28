@@ -1,0 +1,4 @@
+BasedOnStyle: WebKit
+AlwaysBreakTemplateDeclarations: Yes
+ColumnLimit: 119
+SpacesBeforeTrailingComments: 2

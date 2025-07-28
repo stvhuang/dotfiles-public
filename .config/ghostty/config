@@ -1,0 +1,21 @@
+# https://ghostty.org/docs/config/reference
+# quick-terminal-size = font-size * (number of lines) * 5 / 4
+
+background = 1d1f21
+background-opacity = 0.95
+cursor-color = cell-foreground
+cursor-text = cell-background
+font-family = "Iosevka Fixed Slab"
+font-size = 16
+font-style = "Medium"
+font-style-bold = "Bold"
+font-style-bold-italic = "Bold Italic"
+font-style-italic = "Medium Italic"
+foreground = c5c8c6
+keybind = global:cmd+backquote=toggle_quick_terminal
+minimum-contrast = 1.05
+quick-terminal-animation-duration = 0
+quick-terminal-size = 720px
+shell-integration-features = true
+window-padding-x = 0
+window-padding-y = 0

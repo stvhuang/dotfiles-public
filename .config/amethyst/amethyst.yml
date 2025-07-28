@@ -1,0 +1,58 @@
+# https://github.com/ianyh/Amethyst/blob/development/docs/configuration-files.md
+layouts:
+  - fullscreen
+  - tall
+mod1:
+  - control
+cycle-layout:
+  mod: mod1
+  key: space
+
+# disable shortcuts for all other functions
+cycle-layout-backward: false
+decrease-main: false
+display-current-layout: false
+expand-main: false
+focus-ccw: false
+focus-cw: false
+focus-main: false
+focus-screen-1: false
+focus-screen-2: false
+focus-screen-3: false
+focus-screen-4: false
+focus-screen-5: false
+focus-screen-ccw: false
+focus-screen-cw: false
+increase-main: false
+reevaluate-windows: false
+relaunch-amethyst: false
+select-column-layout: false
+select-fullscreen-layout: false
+select-tall-layout: false
+select-wide-layout: false
+shrink-main: false
+swap-ccw: false
+swap-cw: false
+swap-main: false
+swap-screen-ccw: false
+swap-screen-cw: false
+throw-screen-1: false
+throw-screen-2: false
+throw-screen-3: false
+throw-screen-4: false
+throw-screen-5: false
+throw-space-10: false
+throw-space-1: false
+throw-space-2: false
+throw-space-3: false
+throw-space-4: false
+throw-space-5: false
+throw-space-6: false
+throw-space-7: false
+throw-space-8: false
+throw-space-9: false
+throw-space-left: false
+throw-space-right: false
+toggle-float: false
+toggle-focus-follows-mouse: false
+toggle-tiling: false
