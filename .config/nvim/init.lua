@@ -261,6 +261,65 @@ require("mini.surround").setup({})
 -- nvimtools/hydra.nvim (moved to bottom of the file)
 
 -- saghen/blink.cmp
+package.loaded["blinkcmp_source_copilot"] = (function()
+    -- adapter that converts Copilot's `textDocument/inlineCompletion` responses into standard CompletionItem objects for blink.cmp's completion menu.
+    -- injected into package.loaded so blink.cmp can require() it without a separate file.
+    local M = {}
+    function M.new()
+        return setmetatable({}, { __index = M })
+    end
+    function M:get_completions(ctx, callback)
+        local clients = vim.lsp.get_clients({ name = "copilot", bufnr = ctx.bufnr })
+        if #clients == 0 then
+            callback({ is_incomplete_forward = true, is_incomplete_backward = true, items = {} })
+            return function() end
+        end
+        local client = clients[1]
+        local row, col = ctx.cursor[1] - 1, ctx.cursor[2]
+        local params = {
+            textDocument = vim.lsp.util.make_text_document_params(ctx.bufnr),
+            position = { line = row, character = col },
+            context = { triggerKind = 2 },
+        }
+        local ok, req_id = client:request("textDocument/inlineCompletion", params, function(err, result)
+            if err or not result then
+                callback({ is_incomplete_forward = true, is_incomplete_backward = true, items = {} })
+                return
+            end
+            local raw = vim.islist(result) and result or (result.items or {})
+            local items = {}
+            for i, item in ipairs(raw) do
+                local text = type(item.insertText) == "table" and item.insertText.value or item.insertText
+                if text and #text > 0 then
+                    local label = text:match("^([^\n]*)") or text
+                    if #label > 60 then
+                        label = label:sub(1, 57) .. "..."
+                    end
+                    local range = item.range
+                        or {
+                            start = { line = row, character = col },
+                            ["end"] = { line = row, character = col },
+                        }
+                    table.insert(items, {
+                        label = label,
+                        kind = vim.lsp.protocol.CompletionItemKind.Text,
+                        sortText = string.format("%03d", i),
+                        insertTextFormat = vim.lsp.protocol.InsertTextFormat.PlainText,
+                        textEdit = { range = range, newText = text },
+                    })
+                end
+            end
+            callback({ is_incomplete_forward = false, is_incomplete_backward = false, items = items })
+        end)
+        if ok and req_id then
+            return function()
+                client:cancel_request(req_id)
+            end
+        end
+        return function() end
+    end
+    return M
+end)()
 require("blink.cmp").setup({
     appearance = {
         use_nvim_cmp_as_default = true,
@@ -322,7 +381,7 @@ require("blink.cmp").setup({
         providers = {
             copilot = {
                 async = true,
-                module = "blinkcmp_source_copilot",
+                module = "blinkcmp_source_copilot", -- see `package.loaded["blinkcmp_source_copilot"]` above for implementation
                 name = "Copilot",
                 score_offset = 100,
             },
@@ -597,6 +656,20 @@ hydra({
             { desc = "buffers", exit = true },
         },
         {
+            "c",
+            function()
+                require("fzf-lua").commands()
+            end,
+            { desc = "commands", exit = true },
+        },
+        {
+            "C",
+            function()
+                require("fzf-lua").command_history()
+            end,
+            { desc = "command_history", exit = true },
+        },
+        {
             "f",
             function()
                 require("fzf-lua").files()
@@ -630,6 +703,20 @@ hydra({
                 require("fzf-lua").keymaps()
             end,
             { desc = "keymaps", exit = true },
+        },
+        {
+            "r",
+            function()
+                require("fzf-lua").registers()
+            end,
+            { desc = "registers", exit = true },
+        },
+        {
+            "s",
+            function()
+                require("fzf-lua").search_history()
+            end,
+            { desc = "search_history", exit = true },
         },
     },
 })
