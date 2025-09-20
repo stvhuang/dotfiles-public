@@ -77,6 +77,8 @@ vim.filetype.add({
 vim.cmd.packadd("nvim.difftool")
 vim.cmd.packadd("nvim.undotree")
 vim.pack.add({
+    -- { src = "https://github.com/stevearc/oil.nvim" },
+    { src = "https://github.com/barrettruth/canola.nvim", version = "canola" },
     { src = "https://github.com/ibhagwan/fzf-lua" },
     { src = "https://github.com/neovim/nvim-lspconfig" },
     { src = "https://github.com/nvim-lualine/lualine.nvim" },
@@ -87,7 +89,6 @@ vim.pack.add({
     { src = "https://github.com/saghen/blink.cmp", version = vim.version.range("v1.x") },
     { src = "https://github.com/stevearc/aerial.nvim" },
     { src = "https://github.com/stevearc/conform.nvim" },
-    { src = "https://github.com/stevearc/oil.nvim" },
     { src = "https://github.com/stvhuang/memo.nvim" },
     { src = "https://github.com/yorickpeterse/nvim-jump" },
     -- colorscheme
@@ -169,6 +170,7 @@ vim.lsp.enable({
     "tombi",
     "ts_ls",
     "ty",
+    "typos_lsp",
 })
 -- vim.lsp.inline_completion.enable()
 vim.api.nvim_create_autocmd("LspAttach", {
@@ -183,6 +185,26 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
     end,
 })
+
+-- barrettruth/canola.nvim
+vim.g.canola = {
+    columns = {
+        "type",
+        "permissions",
+        "size",
+        "ctime",
+        "mtime",
+        "atime",
+    },
+    sort = {
+        by = { { "type", "asc" }, { "name", "asc" } },
+        ignore_case = true,
+        natural = true,
+    },
+    view_options = {
+        show_hidden = true,
+    },
+}
 
 -- ibhagwan/fzf-lua
 local fzf_lua_profile = "default"
@@ -526,25 +548,25 @@ require("conform").setup({
     },
 })
 
--- stevearc/oil.nvim
-local columns = {
-    "type",
-    "permissions",
-    "size",
-    "ctime",
-    "mtime",
-    "atime",
-}
-local winbar = table.concat(columns, "    ")
-require("oil").setup({
-    columns = columns,
-    view_options = {
-        show_hidden = true,
-    },
-    win_options = {
-        winbar = winbar,
-    },
-})
+-- -- stevearc/oil.nvim
+-- local columns = {
+--     "type",
+--     "permissions",
+--     "size",
+--     "ctime",
+--     "mtime",
+--     "atime",
+-- }
+-- local winbar = table.concat(columns, "    ")
+-- require("oil").setup({
+--     columns = columns,
+--     view_options = {
+--         show_hidden = true,
+--     },
+--     win_options = {
+--         winbar = winbar,
+--     },
+-- })
 
 -- stvhuang/memo.nvim
 -- vim.opt.runtimepath:append("~/docs/memo.nvim")
@@ -605,6 +627,65 @@ vim.api.nvim_create_user_command("Q", "q", {})
 vim.api.nvim_create_user_command("W", "w", {})
 vim.api.nvim_create_user_command("WQ", "wq", {})
 vim.api.nvim_create_user_command("Wq", "wq", {})
+vim.api.nvim_create_user_command("MeInstallTreeSitterCLI", function()
+    local version = "v0.26.8"
+
+    local uname = vim.uv.os_uname()
+    local sysname_map = {
+        Darwin = "macos",
+        -- Linux = "linux",
+    }
+    local sysname = sysname_map[uname.sysname]
+    local machine_map = {
+        -- aarch64 = "arm64",
+        arm64 = "arm64",
+        -- x64 = "x64",
+        -- x86_64 = "x64",
+    }
+    local machine = machine_map[uname.machine]
+    if not sysname or not machine then
+        vim.notify(
+            string.format("[TS] unsupported sysname/machine: %s/%s", uname.sysname, uname.machine),
+            vim.log.levels.ERROR
+        )
+        return
+    end
+    vim.notify(string.format("[TS] detected sysname/machine: %s/%s", sysname, machine), vim.log.levels.INFO)
+
+    local url = string.format(
+        "https://github.com/tree-sitter/tree-sitter/releases/download/%s/tree-sitter-cli-%s-%s.zip",
+        version,
+        sysname,
+        machine
+    )
+
+    local bin_dir = vim.env.HOME .. "/.local/bin"
+    vim.fn.mkdir(bin_dir, "p")
+    local tmp_zip = vim.fn.tempname() .. ".zip"
+
+    vim.notify(string.format("[TS] downloading %s", url), vim.log.levels.INFO)
+    vim.system({ "curl", "-fLsS", "-o", tmp_zip, url }, { text = true }, function(curl_result)
+        if curl_result.code ~= 0 then
+            vim.schedule(function()
+                vim.notify("[TS] download failed: " .. (curl_result.stderr or ""), vim.log.levels.ERROR)
+            end)
+            return
+        end
+
+        vim.system({ "unzip", "-o", tmp_zip, "-d", bin_dir }, { text = true }, function(unzip_result)
+            vim.schedule(function()
+                vim.fn.delete(tmp_zip)
+                if unzip_result.code ~= 0 then
+                    vim.notify("[TS] unzip failed: " .. (unzip_result.stderr or ""), vim.log.levels.ERROR)
+                    return
+                end
+                local bin_path = bin_dir .. "/tree-sitter"
+                vim.system({ "chmod", "+x", bin_path }):wait()
+                vim.notify(string.format("[TS] installed tree-sitter cli to %s", bin_path), vim.log.levels.INFO)
+            end)
+        end)
+    end)
+end, { desc = "Download and install tree-sitter CLI to ~/.local/bin" })
 
 -- misc
 local status_misc, _ = pcall(require, "misc")
