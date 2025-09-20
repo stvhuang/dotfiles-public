@@ -1,0 +1,46 @@
+#!/usr/bin/env sh
+
+set -eu
+
+VERSION="v0.26.8"
+
+UNAME_S="$(uname -s)"
+case "${UNAME_S}" in
+Darwin) SYSNAME="macos" ;;
+# Linux) SYSNAME="linux" ;;
+*)
+  printf "Unsupported sysname: %s\n" "${UNAME_S}" >&2
+  exit 1
+  ;;
+esac
+
+UNAME_M="$(uname -m)"
+case "${UNAME_M}" in
+arm64) MACHINE="arm64" ;;
+# aarch64) MACHINE="arm64" ;;
+# x86_64 | x64) MACHINE="x64" ;;
+*)
+  printf "Unsupported machine: %s\n" "${UNAME_M}" >&2
+  exit 1
+  ;;
+esac
+
+printf "Detected sysname/machine: %s/%s\n" "${SYSNAME}" "${MACHINE}"
+
+URL="https://github.com/tree-sitter/tree-sitter/releases/download/${VERSION}/tree-sitter-cli-${SYSNAME}-${MACHINE}.zip"
+BIN_DIR="${HOME}/.local/bin"
+TMP_ZIP="$(mktemp -t tree-sitter-cli.XXXXXX).zip"
+
+mkdir -p "${BIN_DIR}"
+
+cleanup() { rm -f "${TMP_ZIP}"; }
+trap cleanup EXIT
+
+printf "Downloading %s\n" "${URL}"
+curl -fLsS -o "${TMP_ZIP}" "${URL}"
+
+printf "Extracting to %s\n" "${BIN_DIR}"
+unzip -o "${TMP_ZIP}" -d "${BIN_DIR}"
+
+chmod +x "${BIN_DIR}/tree-sitter"
+printf "Installed tree-sitter cli to %s/tree-sitter\n" "${BIN_DIR}"

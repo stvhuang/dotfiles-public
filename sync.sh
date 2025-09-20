@@ -6,6 +6,8 @@ PATH_LIST=(
   '.config/ghostty/config'
   '.config/nvim/init.lua'
   '.config/tmux/tmux.conf'
+  '.local/bin/,install-fzf'
+  '.local/bin/,install-tree-sitter-cli'
   '.vimrc'
 )
 PRIVATE_REPO="$HOME/dotfiles"
