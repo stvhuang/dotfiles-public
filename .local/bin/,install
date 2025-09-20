@@ -1,0 +1,200 @@
+#!/usr/bin/env sh
+
+set -eu
+
+TOOL="${1:-}"
+case "${TOOL}" in
+fd) ;;
+fzf) ;;
+neovim | nvim) TOOL="neovim" ;;
+ripgrep | rg) TOOL="ripgrep" ;;
+skim | sk) TOOL="skim" ;;
+tree-sitter | tree-sitter-cli) TOOL="tree-sitter-cli" ;;
+*)
+  printf "Usage: %s <fd|fzf|neovim|ripgrep|skim|tree-sitter-cli>\n" "$(basename "$0")" >&2
+  exit 1
+  ;;
+esac
+
+UNAME_S="$(uname -s)"
+UNAME_M="$(uname -m)"
+
+case "${UNAME_S}" in
+Darwin) ;;
+# Linux) ;;
+*)
+  printf "Unsupported sysname: %s\n" "${UNAME_S}" >&2
+  exit 1
+  ;;
+esac
+
+case "${UNAME_M}" in
+arm64) ;;
+# aarch64) ;;
+# x86_64 | x64) ;;
+*)
+  printf "Unsupported machine: %s\n" "${UNAME_M}" >&2
+  exit 1
+  ;;
+esac
+
+printf "Detected sysname/machine: %s/%s\n" "${UNAME_S}" "${UNAME_M}"
+
+BIN_NAME=""
+BIN_SUBPATH=""
+STRIP_SUBDIR=0
+XATTR_NEEDED=0
+
+case "${TOOL}" in
+fd)
+  VERSION="10.4.2"
+  BIN_NAME="fd"
+  BIN_SUBPATH="fd"
+  case "${UNAME_M}" in
+  arm64 | aarch64) ARCH="aarch64" ;;
+  # x86_64 | x64) ARCH="x86_64" ;;
+  esac
+  case "${UNAME_S}" in
+  Darwin) PLATFORM="apple-darwin" ;;
+  # Linux) PLATFORM="unknown-linux-musl" ;;
+  esac
+  URL="https://github.com/sharkdp/fd/releases/download/v${VERSION}/fd-v${VERSION}-${ARCH}-${PLATFORM}.tar.gz"
+  STRIP_SUBDIR=1
+  ;;
+neovim)
+  VERSION="0.12.2"
+  BIN_NAME="nvim"
+  BIN_SUBPATH="bin/nvim"
+  case "${UNAME_S}" in
+  Darwin) SYSNAME="macos" ;;
+  # Linux) SYSNAME="linux" ;;
+  esac
+  case "${UNAME_M}" in
+  arm64) MACHINE="arm64" ;;
+  # aarch64) MACHINE="arm64" ;;
+  # x86_64 | x64) MACHINE="x86_64" ;;
+  esac
+  URL="https://github.com/neovim/neovim/releases/download/v${VERSION}/nvim-${SYSNAME}-${MACHINE}.tar.gz"
+  STRIP_SUBDIR=1
+  XATTR_NEEDED=1
+  ;;
+fzf)
+  VERSION="0.72.0"
+  BIN_NAME="fzf"
+  BIN_SUBPATH="fzf"
+  case "${UNAME_S}" in
+  Darwin) SYSNAME="darwin" ;;
+  # Linux) SYSNAME="linux" ;;
+  esac
+  case "${UNAME_M}" in
+  arm64) MACHINE="arm64" ;;
+  # aarch64) MACHINE="arm64" ;;
+  # x86_64 | x64) MACHINE="amd64" ;;
+  esac
+  URL="https://github.com/junegunn/fzf/releases/download/v${VERSION}/fzf-${VERSION}-${SYSNAME}_${MACHINE}.tar.gz"
+  ;;
+ripgrep)
+  VERSION="15.1.0"
+  BIN_NAME="rg"
+  BIN_SUBPATH="rg"
+  case "${UNAME_M}" in
+  arm64 | aarch64) ARCH="aarch64" ;;
+  # x86_64 | x64) ARCH="x86_64" ;;
+  esac
+  case "${UNAME_S}" in
+  Darwin) PLATFORM="apple-darwin" ;;
+  # Linux) PLATFORM="unknown-linux-musl" ;;
+  esac
+  URL="https://github.com/BurntSushi/ripgrep/releases/download/${VERSION}/ripgrep-${VERSION}-${ARCH}-${PLATFORM}.tar.gz"
+  STRIP_SUBDIR=1
+  ;;
+skim)
+  VERSION="v4.6.1"
+  BIN_NAME="sk"
+  BIN_SUBPATH="sk"
+  case "${UNAME_M}" in
+  arm64 | aarch64) ARCH="aarch64" ;;
+  # x86_64 | x64) ARCH="x86_64" ;;
+  esac
+  case "${UNAME_S}" in
+  Darwin) PLATFORM="apple-darwin" ;;
+  # Linux) PLATFORM="unknown-linux-gnu" ;;
+  esac
+  URL="https://github.com/skim-rs/skim/releases/download/${VERSION}/skim-${ARCH}-${PLATFORM}.tar.xz"
+  STRIP_SUBDIR=1
+  ;;
+tree-sitter-cli)
+  VERSION="v0.26.8"
+  BIN_NAME="tree-sitter"
+  BIN_SUBPATH="tree-sitter"
+  case "${UNAME_S}" in
+  Darwin) SYSNAME="macos" ;;
+  # Linux) SYSNAME="linux" ;;
+  esac
+  case "${UNAME_M}" in
+  arm64) MACHINE="arm64" ;;
+  # aarch64) MACHINE="arm64" ;;
+  # x86_64 | x64) MACHINE="x64" ;;
+  esac
+  URL="https://github.com/tree-sitter/tree-sitter/releases/download/${VERSION}/tree-sitter-cli-${SYSNAME}-${MACHINE}.zip"
+  ;;
+esac
+
+BIN_DIR="${HOME}/.local/bin"
+mkdir -p "${BIN_DIR}"
+
+case "${URL}" in
+*.tar.gz)
+  TMP_FILE="$(mktemp -t "${TOOL}.XXXXXX").tar.gz"
+  TMP_DIR="$(mktemp -d -t "${TOOL}.XXXXXX")"
+  cleanup() {
+    rm -f "${TMP_FILE}"
+    rm -rf "${TMP_DIR}"
+  }
+  trap cleanup EXIT
+  printf "Downloading %s\n" "${URL}"
+  curl -fLsS -o "${TMP_FILE}" "${URL}"
+  if [ "${XATTR_NEEDED}" = "1" ]; then
+    xattr -c "${TMP_FILE}"
+  fi
+  printf "Extracting to %s\n" "${BIN_DIR}"
+  if [ "${STRIP_SUBDIR}" = "1" ]; then
+    tar -xzf "${TMP_FILE}" -C "${TMP_DIR}"
+    mv "${TMP_DIR}"/*/"${BIN_SUBPATH}" "${BIN_DIR}/${BIN_NAME}"
+  else
+    tar -xzf "${TMP_FILE}" -C "${BIN_DIR}"
+  fi
+  ;;
+*.tar.xz)
+  TMP_FILE="$(mktemp -t "${TOOL}.XXXXXX").tar.xz"
+  TMP_DIR="$(mktemp -d -t "${TOOL}.XXXXXX")"
+  cleanup() {
+    rm -f "${TMP_FILE}"
+    rm -rf "${TMP_DIR}"
+  }
+  trap cleanup EXIT
+  printf "Downloading %s\n" "${URL}"
+  curl -fLsS -o "${TMP_FILE}" "${URL}"
+  printf "Extracting to %s\n" "${BIN_DIR}"
+  if [ "${STRIP_SUBDIR}" = "1" ]; then
+    tar -xJf "${TMP_FILE}" -C "${TMP_DIR}"
+    mv "${TMP_DIR}"/*/"${BIN_NAME}" "${BIN_DIR}/${BIN_NAME}"
+  else
+    tar -xJf "${TMP_FILE}" -C "${BIN_DIR}"
+  fi
+  ;;
+*.zip)
+  TMP_FILE="$(mktemp -t "${TOOL}.XXXXXX").zip"
+  cleanup() { rm -f "${TMP_FILE}"; }
+  trap cleanup EXIT
+  printf "Downloading %s\n" "${URL}"
+  curl -fLsS -o "${TMP_FILE}" "${URL}"
+  printf "Extracting to %s\n" "${BIN_DIR}"
+  unzip -o "${TMP_FILE}" -d "${BIN_DIR}"
+  ;;
+esac
+
+BIN_PATH="${BIN_DIR}/${BIN_NAME}"
+
+chmod +x "${BIN_PATH}"
+printf "Installed %s to %s\n" "${TOOL}" "${BIN_PATH}"
