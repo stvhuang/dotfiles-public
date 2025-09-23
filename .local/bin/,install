@@ -2,6 +2,7 @@
 
 set -eu
 
+VERSION_CODEX="0.130.0"          # https://github.com/openai/codex
 VERSION_DATABRICKS_CLI="0.299.2" # https://github.com/databricks/cli
 VERSION_FD="10.4.2"              # https://github.com/sharkdp/fd
 VERSION_FZF="0.72.0"             # https://github.com/junegunn/fzf
@@ -14,6 +15,7 @@ VERSION_TREE_SITTER_CLI="0.26.8" # https://github.com/tree-sitter/tree-sitter
 
 TOOL="${1:-}"
 case "${TOOL}" in
+codex) ;;
 databricks-cli | databricks) TOOL="databricks-cli" ;;
 fd) ;;
 fzf) ;;
@@ -24,7 +26,7 @@ skim | sk) TOOL="skim" ;;
 tmux) ;;
 tree-sitter-cli | tree-sitter) TOOL="tree-sitter-cli" ;;
 *)
-  printf "Usage: %s <databricks-cli|fd|fzf|neovim|rclone|ripgrep|skim|tmux|tree-sitter-cli>\n" "$(basename "$0")" >&2
+  printf "Usage: %s <codex|databricks-cli|fd|fzf|neovim|rclone|ripgrep|skim|tmux|tree-sitter-cli>\n" "$(basename "$0")" >&2
   exit 1
   ;;
 esac
@@ -55,10 +57,28 @@ printf "Detected sysname/machine: %s/%s\n" "${UNAME_S}" "${UNAME_M}"
 
 BIN_NAME=""
 BIN_SUBPATH=""
+OPT_SUBDIR=""
+FLAT_RENAME=0
 STRIP_SUBDIR=0
 XATTR_NEEDED=0
 
 case "${TOOL}" in
+codex)
+  VERSION="${VERSION_CODEX}"
+  BIN_NAME="codex"
+  BIN_SUBPATH="codex"
+  case "${UNAME_M}" in
+  arm64 | aarch64) ARCH="aarch64" ;;
+  # x86_64 | x64) ARCH="x86_64" ;;
+  esac
+  case "${UNAME_S}" in
+  Darwin) PLATFORM="apple-darwin" ;;
+  # Linux) PLATFORM="unknown-linux-musl" ;;
+  esac
+  BIN_SUBPATH="codex-${ARCH}-${PLATFORM}"
+  URL="https://github.com/openai/codex/releases/download/rust-v${VERSION}/codex-${ARCH}-${PLATFORM}.tar.gz"
+  FLAT_RENAME=1
+  ;;
 databricks-cli)
   VERSION="${VERSION_DATABRICKS_CLI}"
   BIN_NAME="databricks"
@@ -117,7 +137,7 @@ neovim)
   # x86_64 | x64) MACHINE="x86_64" ;;
   esac
   URL="https://github.com/neovim/neovim/releases/download/v${VERSION}/nvim-${SYSNAME}-${MACHINE}.tar.gz"
-  STRIP_SUBDIR=1
+  OPT_SUBDIR="nvim"
   XATTR_NEEDED=1
   ;;
 rclone)
@@ -216,11 +236,24 @@ case "${URL}" in
   if [ "${XATTR_NEEDED}" = "1" ]; then
     xattr -c "${TMP_FILE}"
   fi
-  printf "Extracting to %s\n" "${BIN_DIR}"
-  if [ "${STRIP_SUBDIR}" = "1" ]; then
+  if [ "${FLAT_RENAME}" = "1" ]; then
+    printf "Extracting to %s\n" "${BIN_DIR}"
+    tar -xzf "${TMP_FILE}" -C "${TMP_DIR}"
+    mv "${TMP_DIR}/${BIN_SUBPATH}" "${BIN_DIR}/${BIN_NAME}"
+  elif [ -n "${OPT_SUBDIR}" ]; then
+    OPT_DIR="${HOME}/.local/opt"
+    mkdir -p "${OPT_DIR}"
+    printf "Extracting to %s\n" "${OPT_DIR}/${OPT_SUBDIR}"
+    tar -xzf "${TMP_FILE}" -C "${TMP_DIR}"
+    rm -rf "${OPT_DIR:?}/${OPT_SUBDIR}"
+    mv "${TMP_DIR}"/* "${OPT_DIR}/${OPT_SUBDIR}"
+    ln -sf "${OPT_DIR}/${OPT_SUBDIR}/${BIN_SUBPATH}" "${BIN_DIR}/${BIN_NAME}"
+  elif [ "${STRIP_SUBDIR}" = "1" ]; then
+    printf "Extracting to %s\n" "${BIN_DIR}"
     tar -xzf "${TMP_FILE}" -C "${TMP_DIR}"
     mv "${TMP_DIR}"/*/"${BIN_SUBPATH}" "${BIN_DIR}/${BIN_NAME}"
   else
+    printf "Extracting to %s\n" "${BIN_DIR}"
     tar -xzf "${TMP_FILE}" -C "${BIN_DIR}"
   fi
   ;;
