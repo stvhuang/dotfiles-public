@@ -2,16 +2,18 @@
 
 set -eu
 
+VERSION_DATABRICKS_CLI="0.299.2" # https://github.com/databricks/cli
 VERSION_FD="10.4.2"              # https://github.com/sharkdp/fd
 VERSION_FZF="0.72.0"             # https://github.com/junegunn/fzf
 VERSION_NEOVIM="0.12.2"          # https://github.com/neovim/neovim
-VERSION_RCLONE="1.74.0"          # https://github.com/rclone/rclone
+VERSION_RCLONE="1.74.1"          # https://github.com/rclone/rclone
 VERSION_RIPGREP="15.1.0"         # https://github.com/burntsushi/ripgrep
 VERSION_SKIM="4.6.1"             # https://github.com/skim-rs/skim
 VERSION_TREE_SITTER_CLI="0.26.8" # https://github.com/tree-sitter/tree-sitter
 
 TOOL="${1:-}"
 case "${TOOL}" in
+databricks-cli | databricks) TOOL="databricks-cli" ;;
 fd) ;;
 fzf) ;;
 neovim | nvim) TOOL="neovim" ;;
@@ -20,7 +22,7 @@ ripgrep | rg) TOOL="ripgrep" ;;
 skim | sk) TOOL="skim" ;;
 tree-sitter-cli | tree-sitter) TOOL="tree-sitter-cli" ;;
 *)
-  printf "Usage: %s <fd|fzf|neovim|rclone|ripgrep|skim|tree-sitter-cli>\n" "$(basename "$0")" >&2
+  printf "Usage: %s <databricks-cli|fd|fzf|neovim|rclone|ripgrep|skim|tree-sitter-cli>\n" "$(basename "$0")" >&2
   exit 1
   ;;
 esac
@@ -55,6 +57,20 @@ STRIP_SUBDIR=0
 XATTR_NEEDED=0
 
 case "${TOOL}" in
+databricks-cli)
+  VERSION="${VERSION_DATABRICKS_CLI}"
+  BIN_NAME="databricks"
+  BIN_SUBPATH="databricks"
+  case "${UNAME_S}" in
+  Darwin) SYSNAME="darwin" ;;
+  Linux) SYSNAME="linux" ;;
+  esac
+  case "${UNAME_M}" in
+  arm64 | aarch64) MACHINE="arm64" ;;
+  x86_64 | x64) MACHINE="amd64" ;;
+  esac
+  URL="https://github.com/databricks/cli/releases/download/v${VERSION}/databricks_cli_${VERSION}_${SYSNAME}_${MACHINE}.zip"
+  ;;
 fd)
   VERSION="${VERSION_FD}"
   BIN_NAME="fd"
@@ -76,12 +92,12 @@ fzf)
   BIN_SUBPATH="fzf"
   case "${UNAME_S}" in
   Darwin) SYSNAME="darwin" ;;
-  # Linux) SYSNAME="linux" ;;
+  Linux) SYSNAME="linux" ;;
   esac
   case "${UNAME_M}" in
   arm64) MACHINE="arm64" ;;
   # aarch64) MACHINE="arm64" ;;
-  # x86_64 | x64) MACHINE="amd64" ;;
+  x86_64 | x64) MACHINE="amd64" ;;
   esac
   URL="https://github.com/junegunn/fzf/releases/download/v${VERSION}/fzf-${VERSION}-${SYSNAME}_${MACHINE}.tar.gz"
   ;;
@@ -108,11 +124,11 @@ rclone)
   BIN_SUBPATH="rclone"
   case "${UNAME_S}" in
   Darwin) SYSNAME="osx" ;;
-  # Linux) SYSNAME="linux" ;;
+  Linux) SYSNAME="linux" ;;
   esac
   case "${UNAME_M}" in
   arm64 | aarch64) MACHINE="arm64" ;;
-  # x86_64 | x64) MACHINE="amd64" ;;
+  x86_64 | x64) MACHINE="amd64" ;;
   esac
   URL="https://github.com/rclone/rclone/releases/download/v${VERSION}/rclone-v${VERSION}-${SYSNAME}-${MACHINE}.zip"
   STRIP_SUBDIR=1

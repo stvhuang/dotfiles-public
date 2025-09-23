@@ -40,9 +40,16 @@ if [ "${UNAME_S}" = "Darwin" ]; then
 
   # finder
   info 'Configuring Finder'
+
+  defaults write NSGlobalDomain AppleICUDateFormatStrings -dict-add "1" "yyyy-MM-dd HH:mm"
+  defaults write NSGlobalDomain AppleICUDateFormatStrings -dict-add "2" "yyyy-MM-dd HH:mm:ss"
+  defaults write NSGlobalDomain AppleICUDateFormatStrings -dict-add "3" "yyyy-MM-dd HH:mm:ss"
+  defaults write NSGlobalDomain AppleICUDateFormatStrings -dict-add "4" "yyyy-MM-dd HH:mm:ss"
+
   defaults write com.apple.finder FXPreferredViewStyle -string Nlsv # list view
   defaults write com.apple.finder FXRemoveOldTrashItems -bool true  # remove items from Trash after 30 days
   defaults write com.apple.finder NewWindowTarget -string PfHm      # default location for new Finder windows: home directory
+  defaults write com.apple.finder RelativeDates -bool false         # relative dates (e.g. "yesterday") vs absolute dates
   defaults write com.apple.finder ShowPathbar -bool true            # path bar at the bottom of Finder windows
   defaults write com.apple.finder _FXSortFoldersFirst -bool true    # sort folders first
   killall Finder
@@ -75,6 +82,10 @@ HOME_DFS='
 .vimrc
 '
 for DF in ${HOME_DFS}; do
+  if [ ! -e "${DF}" ]; then
+    warn "File ${DF} not found, skipping"
+    continue
+  fi
   info "Linking ~/${DF}"
   rm -rf "${HOME}/${DF}"
   ln -fns "${PWD}/${DF}" "${HOME}/${DF}"
