@@ -2,16 +2,25 @@
 
 set -eu
 
+VERSION_FD="10.4.2"              # https://github.com/sharkdp/fd
+VERSION_FZF="0.72.0"             # https://github.com/junegunn/fzf
+VERSION_NEOVIM="0.12.2"          # https://github.com/neovim/neovim
+VERSION_RCLONE="1.74.0"          # https://github.com/rclone/rclone
+VERSION_RIPGREP="15.1.0"         # https://github.com/burntsushi/ripgrep
+VERSION_SKIM="4.6.1"             # https://github.com/skim-rs/skim
+VERSION_TREE_SITTER_CLI="0.26.8" # https://github.com/tree-sitter/tree-sitter
+
 TOOL="${1:-}"
 case "${TOOL}" in
 fd) ;;
 fzf) ;;
 neovim | nvim) TOOL="neovim" ;;
+rclone) ;;
 ripgrep | rg) TOOL="ripgrep" ;;
 skim | sk) TOOL="skim" ;;
-tree-sitter | tree-sitter-cli) TOOL="tree-sitter-cli" ;;
+tree-sitter-cli | tree-sitter) TOOL="tree-sitter-cli" ;;
 *)
-  printf "Usage: %s <fd|fzf|neovim|ripgrep|skim|tree-sitter-cli>\n" "$(basename "$0")" >&2
+  printf "Usage: %s <fd|fzf|neovim|rclone|ripgrep|skim|tree-sitter-cli>\n" "$(basename "$0")" >&2
   exit 1
   ;;
 esac
@@ -21,7 +30,7 @@ UNAME_M="$(uname -m)"
 
 case "${UNAME_S}" in
 Darwin) ;;
-# Linux) ;;
+Linux) ;;
 *)
   printf "Unsupported sysname: %s\n" "${UNAME_S}" >&2
   exit 1
@@ -31,7 +40,7 @@ esac
 case "${UNAME_M}" in
 arm64) ;;
 # aarch64) ;;
-# x86_64 | x64) ;;
+x86_64 | x64) ;;
 *)
   printf "Unsupported machine: %s\n" "${UNAME_M}" >&2
   exit 1
@@ -47,7 +56,7 @@ XATTR_NEEDED=0
 
 case "${TOOL}" in
 fd)
-  VERSION="10.4.2"
+  VERSION="${VERSION_FD}"
   BIN_NAME="fd"
   BIN_SUBPATH="fd"
   case "${UNAME_M}" in
@@ -61,8 +70,23 @@ fd)
   URL="https://github.com/sharkdp/fd/releases/download/v${VERSION}/fd-v${VERSION}-${ARCH}-${PLATFORM}.tar.gz"
   STRIP_SUBDIR=1
   ;;
+fzf)
+  VERSION="${VERSION_FZF}"
+  BIN_NAME="fzf"
+  BIN_SUBPATH="fzf"
+  case "${UNAME_S}" in
+  Darwin) SYSNAME="darwin" ;;
+  # Linux) SYSNAME="linux" ;;
+  esac
+  case "${UNAME_M}" in
+  arm64) MACHINE="arm64" ;;
+  # aarch64) MACHINE="arm64" ;;
+  # x86_64 | x64) MACHINE="amd64" ;;
+  esac
+  URL="https://github.com/junegunn/fzf/releases/download/v${VERSION}/fzf-${VERSION}-${SYSNAME}_${MACHINE}.tar.gz"
+  ;;
 neovim)
-  VERSION="0.12.2"
+  VERSION="${VERSION_NEOVIM}"
   BIN_NAME="nvim"
   BIN_SUBPATH="bin/nvim"
   case "${UNAME_S}" in
@@ -78,23 +102,23 @@ neovim)
   STRIP_SUBDIR=1
   XATTR_NEEDED=1
   ;;
-fzf)
-  VERSION="0.72.0"
-  BIN_NAME="fzf"
-  BIN_SUBPATH="fzf"
+rclone)
+  VERSION="${VERSION_RCLONE}"
+  BIN_NAME="rclone"
+  BIN_SUBPATH="rclone"
   case "${UNAME_S}" in
-  Darwin) SYSNAME="darwin" ;;
+  Darwin) SYSNAME="osx" ;;
   # Linux) SYSNAME="linux" ;;
   esac
   case "${UNAME_M}" in
-  arm64) MACHINE="arm64" ;;
-  # aarch64) MACHINE="arm64" ;;
+  arm64 | aarch64) MACHINE="arm64" ;;
   # x86_64 | x64) MACHINE="amd64" ;;
   esac
-  URL="https://github.com/junegunn/fzf/releases/download/v${VERSION}/fzf-${VERSION}-${SYSNAME}_${MACHINE}.tar.gz"
+  URL="https://github.com/rclone/rclone/releases/download/v${VERSION}/rclone-v${VERSION}-${SYSNAME}-${MACHINE}.zip"
+  STRIP_SUBDIR=1
   ;;
 ripgrep)
-  VERSION="15.1.0"
+  VERSION="${VERSION_RIPGREP}"
   BIN_NAME="rg"
   BIN_SUBPATH="rg"
   case "${UNAME_M}" in
@@ -109,7 +133,7 @@ ripgrep)
   STRIP_SUBDIR=1
   ;;
 skim)
-  VERSION="v4.6.1"
+  VERSION="${VERSION_SKIM}"
   BIN_NAME="sk"
   BIN_SUBPATH="sk"
   case "${UNAME_M}" in
@@ -120,23 +144,23 @@ skim)
   Darwin) PLATFORM="apple-darwin" ;;
   # Linux) PLATFORM="unknown-linux-gnu" ;;
   esac
-  URL="https://github.com/skim-rs/skim/releases/download/${VERSION}/skim-${ARCH}-${PLATFORM}.tar.xz"
+  URL="https://github.com/skim-rs/skim/releases/download/v${VERSION}/skim-${ARCH}-${PLATFORM}.tar.xz"
   STRIP_SUBDIR=1
   ;;
 tree-sitter-cli)
-  VERSION="v0.26.8"
+  VERSION="${VERSION_TREE_SITTER_CLI}"
   BIN_NAME="tree-sitter"
   BIN_SUBPATH="tree-sitter"
   case "${UNAME_S}" in
   Darwin) SYSNAME="macos" ;;
-  # Linux) SYSNAME="linux" ;;
+  Linux) SYSNAME="linux" ;;
   esac
   case "${UNAME_M}" in
   arm64) MACHINE="arm64" ;;
   # aarch64) MACHINE="arm64" ;;
-  # x86_64 | x64) MACHINE="x64" ;;
+  x86_64 | x64) MACHINE="x64" ;;
   esac
-  URL="https://github.com/tree-sitter/tree-sitter/releases/download/${VERSION}/tree-sitter-cli-${SYSNAME}-${MACHINE}.zip"
+  URL="https://github.com/tree-sitter/tree-sitter/releases/download/v${VERSION}/tree-sitter-cli-${SYSNAME}-${MACHINE}.zip"
   ;;
 esac
 
@@ -178,19 +202,28 @@ case "${URL}" in
   printf "Extracting to %s\n" "${BIN_DIR}"
   if [ "${STRIP_SUBDIR}" = "1" ]; then
     tar -xJf "${TMP_FILE}" -C "${TMP_DIR}"
-    mv "${TMP_DIR}"/*/"${BIN_NAME}" "${BIN_DIR}/${BIN_NAME}"
+    mv "${TMP_DIR}"/*/"${BIN_SUBPATH}" "${BIN_DIR}/${BIN_NAME}"
   else
     tar -xJf "${TMP_FILE}" -C "${BIN_DIR}"
   fi
   ;;
 *.zip)
   TMP_FILE="$(mktemp -t "${TOOL}.XXXXXX").zip"
-  cleanup() { rm -f "${TMP_FILE}"; }
+  TMP_DIR="$(mktemp -d -t "${TOOL}.XXXXXX")"
+  cleanup() {
+    rm -f "${TMP_FILE}"
+    rm -rf "${TMP_DIR}"
+  }
   trap cleanup EXIT
   printf "Downloading %s\n" "${URL}"
   curl -fLsS -o "${TMP_FILE}" "${URL}"
   printf "Extracting to %s\n" "${BIN_DIR}"
-  unzip -o "${TMP_FILE}" -d "${BIN_DIR}"
+  if [ "${STRIP_SUBDIR}" = "1" ]; then
+    unzip -o "${TMP_FILE}" -d "${TMP_DIR}"
+    mv "${TMP_DIR}"/*/"${BIN_SUBPATH}" "${BIN_DIR}/${BIN_NAME}"
+  else
+    unzip -o "${TMP_FILE}" -d "${BIN_DIR}"
+  fi
   ;;
 esac
 

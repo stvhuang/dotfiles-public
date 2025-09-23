@@ -8,6 +8,7 @@ PATH_LIST=(
   '.config/tmux/tmux.conf'
   '.local/bin/,install'
   '.vimrc'
+  'install.sh'
 )
 PRIVATE_REPO="$HOME/dotfiles"
 

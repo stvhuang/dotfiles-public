@@ -78,6 +78,7 @@ vim.cmd.packadd("nvim.difftool")
 vim.cmd.packadd("nvim.undotree")
 vim.pack.add({
     -- { src = "https://github.com/stevearc/oil.nvim" },
+    { src = "https://github.com/barrettruth/canola-collection" },
     { src = "https://github.com/barrettruth/canola.nvim", version = "canola" },
     { src = "https://github.com/ibhagwan/fzf-lua" },
     { src = "https://github.com/neovim/nvim-lspconfig" },
@@ -196,15 +197,14 @@ vim.g.canola = {
         "mtime",
         "atime",
     },
+    hidden = { enabled = false },
     sort = {
         by = { { "type", "asc" }, { "name", "asc" } },
         ignore_case = true,
         natural = true,
     },
-    view_options = {
-        show_hidden = true,
-    },
 }
+vim.g.canola_ssh = {}
 
 -- ibhagwan/fzf-lua
 local fzf_lua_profile = "default"
