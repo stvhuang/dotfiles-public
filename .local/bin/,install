@@ -9,6 +9,7 @@ VERSION_NEOVIM="0.12.2"          # https://github.com/neovim/neovim
 VERSION_RCLONE="1.74.1"          # https://github.com/rclone/rclone
 VERSION_RIPGREP="15.1.0"         # https://github.com/burntsushi/ripgrep
 VERSION_SKIM="4.6.1"             # https://github.com/skim-rs/skim
+VERSION_TMUX="3.6a"              # https://github.com/tmux/tmux-builds
 VERSION_TREE_SITTER_CLI="0.26.8" # https://github.com/tree-sitter/tree-sitter
 
 TOOL="${1:-}"
@@ -20,9 +21,10 @@ neovim | nvim) TOOL="neovim" ;;
 rclone) ;;
 ripgrep | rg) TOOL="ripgrep" ;;
 skim | sk) TOOL="skim" ;;
+tmux) ;;
 tree-sitter-cli | tree-sitter) TOOL="tree-sitter-cli" ;;
 *)
-  printf "Usage: %s <databricks-cli|fd|fzf|neovim|rclone|ripgrep|skim|tree-sitter-cli>\n" "$(basename "$0")" >&2
+  printf "Usage: %s <databricks-cli|fd|fzf|neovim|rclone|ripgrep|skim|tmux|tree-sitter-cli>\n" "$(basename "$0")" >&2
   exit 1
   ;;
 esac
@@ -162,6 +164,23 @@ skim)
   esac
   URL="https://github.com/skim-rs/skim/releases/download/v${VERSION}/skim-${ARCH}-${PLATFORM}.tar.xz"
   STRIP_SUBDIR=1
+  ;;
+tmux)
+  VERSION="${VERSION_TMUX}"
+  BIN_NAME="tmux"
+  BIN_SUBPATH="tmux"
+  case "${UNAME_S}" in
+  Darwin) SYSNAME="macos" ;;
+  *)
+    printf "tmux-builds only provides macOS binaries\n" >&2
+    exit 1
+    ;;
+  esac
+  case "${UNAME_M}" in
+  arm64 | aarch64) MACHINE="arm64" ;;
+  x86_64 | x64) MACHINE="x86_64" ;;
+  esac
+  URL="https://github.com/tmux/tmux-builds/releases/download/v${VERSION}/tmux-${VERSION}-${SYSNAME}-${MACHINE}.tar.gz"
   ;;
 tree-sitter-cli)
   VERSION="${VERSION_TREE_SITTER_CLI}"
