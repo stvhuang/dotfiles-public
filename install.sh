@@ -1,14 +1,17 @@
 #!/usr/bin/env sh
-
-. ./.profile
+set -e
 
 info() {
-  printf "\033[1;32m[INFO]\033[0m ${1}...\n"
+  printf "\033[1;32m[INFO]\033[0m %s...\n" "${1}"
 }
 
 warn() {
-  printf "\033[1;33m[WARN]\033[0m ${1}...\n"
+  printf "\033[1;33m[WARN]\033[0m %s...\n" "${1}"
 }
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+. "${SCRIPT_DIR}/.profile"
 
 UNAME_S="$(uname -s)"
 info "Detected OS: ${UNAME_S}"
@@ -82,18 +85,18 @@ HOME_DFS='
 .vimrc
 '
 for DF in ${HOME_DFS}; do
-  if [ ! -e "${DF}" ]; then
+  if [ ! -e "${SCRIPT_DIR}/${DF}" ]; then
     warn "File ${DF} not found, skipping"
     continue
   fi
   info "Linking ~/${DF}"
-  rm -rf "${HOME}/${DF}"
-  ln -fns "${PWD}/${DF}" "${HOME}/${DF}"
+  rm -f "${HOME}/${DF}"
+  ln -fns "${SCRIPT_DIR}/${DF}" "${HOME}/${DF}"
 done
 
 # ~/.config
 mkdir -pv "${XDG_CONFIG_HOME}"
-for DF in "${PWD}/.config/"*; do
+for DF in "${SCRIPT_DIR}/.config/"*; do
   DF_NAME="$(basename "${DF}")"
   info "Linking ~/.config/${DF_NAME}"
   rm -rf "${XDG_CONFIG_HOME}/${DF_NAME}"
@@ -102,7 +105,7 @@ done
 
 # ~/.local/bin
 mkdir -pv "${HOME}/.local/bin"
-for DF in "${PWD}/.local/bin/"*; do
+for DF in "${SCRIPT_DIR}/.local/bin/"*; do
   DF_NAME="$(basename "${DF}")"
   info "Linking ~/.local/bin/${DF_NAME}"
   rm -rf "${HOME}/.local/bin/${DF_NAME}"
@@ -111,7 +114,7 @@ done
 
 # ~/.ssh
 mkdir -pv "${HOME}/.ssh"
-for DF in "${PWD}/.ssh/"*; do
+for DF in "${SCRIPT_DIR}/.ssh/"*; do
   DF_NAME="$(basename "${DF}")"
   info "Linking ~/.ssh/${DF_NAME}"
   rm -rf "${HOME}/.ssh/${DF_NAME}"
@@ -119,6 +122,6 @@ for DF in "${PWD}/.ssh/"*; do
 done
 if [ ! -f "${HOME}/.ssh/id_ed25519" ] && [ ! -f "${HOME}/.ssh/id_ed25519.pub" ]; then
   info "Generating SSH key"
-  ssh-keygen -t ed25519 -f ${HOME}/.ssh/id_ed25519 -N "" -C "${USER}@${HOSTNAME}@$(date +%Y-%m-%d)"
+  ssh-keygen -t ed25519 -f "${HOME}/.ssh/id_ed25519" -N "" -C "${USER}@${HOSTNAME}@$(date +%Y-%m-%d)"
 fi
-chmod 400 ${HOME}/.ssh/id_*
+find "${HOME}/.ssh" -maxdepth 1 -name 'id_*' -exec chmod 400 {} +
