@@ -7,6 +7,7 @@ PATH_LIST=(
   '.config/nvim/init.lua'
   '.config/tmux/tmux.conf'
   '.local/bin/,install'
+  '.local/bin/,whisper'
   '.vimrc'
   'install.sh'
 )

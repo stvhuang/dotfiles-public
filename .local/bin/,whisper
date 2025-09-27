@@ -1,0 +1,119 @@
+#!/usr/bin/env sh
+
+DEFAULT_MODEL="large-v3-turbo"
+DEFAULT_LANGUAGE="auto"
+MODEL_DIR="${HOME}/.cache/whisper.cpp/models"
+
+if ! command -v whisper-cli >/dev/null 2>&1; then
+  printf "[ERROR] whisper-cli not found. Install with: brew install whisper-cpp\n" >&2
+  exit 1
+fi
+
+usage() {
+  printf "Usage: %s [options] <audio_or_video_file>\n" "${0}" >&2
+  printf "  -m, --model MODEL      model name (default: %s)\n" "${DEFAULT_MODEL}" >&2
+  printf "  -l, --language LANG    language code or 'auto' (default: %s)\n" "${DEFAULT_LANGUAGE}" >&2
+  exit "${1:-1}"
+}
+
+MODEL="${DEFAULT_MODEL}"
+LANGUAGE="${DEFAULT_LANGUAGE}"
+
+while [ $# -gt 0 ]; do
+  case "${1}" in
+  -m | --model)
+    [ -z "${2}" ] && {
+      printf "[ERROR] %s requires a value\n" "${1}" >&2
+      usage
+    }
+    MODEL="${2}"
+    shift 2
+    ;;
+  -l | --language)
+    [ -z "${2}" ] && {
+      printf "[ERROR] %s requires a value\n" "${1}" >&2
+      usage
+    }
+    LANGUAGE="${2}"
+    shift 2
+    ;;
+  -h | --help) usage 0 ;;
+  -*)
+    printf "[ERROR] Unknown option: %s\n" "${1}" >&2
+    usage
+    ;;
+  *) break ;;
+  esac
+done
+
+if [ -z "${1}" ]; then
+  usage
+fi
+
+if [ ! -f "${1}" ]; then
+  printf "[ERROR] File not found: %s\n" "${1}" >&2
+  exit 1
+fi
+
+MODEL_NAME="ggml-${MODEL}.bin"
+MODEL_PATH="${MODEL_DIR}/${MODEL_NAME}"
+MODEL_URL="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${MODEL_NAME}"
+
+INPUT="${1}"
+BASENAME=$(basename "${INPUT}" | sed 's/\.[^.]*$//')
+OUTPUT="./${BASENAME}"
+
+MODEL_TMP=""
+WORKDIR=""
+trap '[ -n "${MODEL_TMP}" ] && rm -f "${MODEL_TMP}"; [ -n "${WORKDIR}" ] && rm -rf "${WORKDIR}"' EXIT INT TERM
+
+if [ ! -f "${MODEL_PATH}" ]; then
+  if ! command -v curl >/dev/null 2>&1; then
+    printf "[ERROR] curl is required to download the model.\n" >&2
+    exit 1
+  fi
+  printf "[INFO] Downloading model %s to %s...\n" "${MODEL_NAME}" "${MODEL_DIR}"
+  mkdir -p "${MODEL_DIR}"
+  MODEL_TMP="${MODEL_PATH}.tmp.$$"
+  if ! curl -fL --progress-bar -o "${MODEL_TMP}" "${MODEL_URL}"; then
+    printf "[ERROR] Failed to download model.\n" >&2
+    exit 1
+  fi
+  if ! mv "${MODEL_TMP}" "${MODEL_PATH}"; then
+    printf "[ERROR] Failed to move model into place.\n" >&2
+    exit 1
+  fi
+  MODEL_TMP=""
+fi
+
+AUDIO_INPUT="${INPUT}"
+
+EXT=$(printf '%s' "${INPUT##*.}" | tr '[:upper:]' '[:lower:]')
+case "${EXT}" in
+flac | mp3 | ogg | wav) ;;
+*)
+  if ! command -v ffmpeg >/dev/null 2>&1; then
+    printf "[ERROR] ffmpeg is required to process non-audio files.\n" >&2
+    exit 1
+  fi
+  WORKDIR=$(mktemp -d) || {
+    printf "[ERROR] Failed to create temp directory.\n" >&2
+    exit 1
+  }
+  TMPFILE="${WORKDIR}/audio.wav"
+  printf "[INFO] Extracting audio to temporary file...\n"
+  if ! ffmpeg -hide_banner -loglevel error -i "${INPUT}" -vn -ar 16000 -ac 1 -c:a pcm_s16le "${TMPFILE}" -y; then
+    printf "[ERROR] ffmpeg failed to extract audio.\n" >&2
+    exit 1
+  fi
+  AUDIO_INPUT="${TMPFILE}"
+  ;;
+esac
+
+printf "[INFO] Transcribing with model %s, language: %s...\n" "${MODEL}" "${LANGUAGE}"
+if ! whisper-cli -m "${MODEL_PATH}" -f "${AUDIO_INPUT}" -l "${LANGUAGE}" -otxt -osrt -of "${OUTPUT}"; then
+  printf "[ERROR] Transcription failed.\n" >&2
+  exit 1
+fi
+
+printf "[INFO] Transcription saved to %s.txt and %s.srt\n" "${OUTPUT}" "${OUTPUT}"
